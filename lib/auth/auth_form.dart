@@ -1,5 +1,7 @@
 import 'dart:ffi';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -17,6 +19,38 @@ class _AuthFormState extends State<AuthForm> {
   var _userName = '';
 
   bool isLoginPage = false;
+
+  startauthentication() async {
+    final validity = _formKey.currentState!.validate();
+    FocusScope.of(context).unfocus();
+
+    if (validity) {
+      _formKey.currentState!.save();
+      submitForm(_email, _password, _userName);
+    }
+  }
+
+  void submitForm(String email, String password, String username) async {
+    final _auth = FirebaseAuth.instance;
+
+    UserCredential authResult;
+    try {
+      if (isLoginPage) {
+        authResult = await _auth.signInWithEmailAndPassword(
+            email: email, password: password);
+      } else {
+        authResult = await _auth.createUserWithEmailAndPassword(
+            email: email, password: password);
+        String uid = authResult.user!.uid;
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({'username': username, 'email': email});
+      }
+    } catch (err) {
+      print(err);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +84,7 @@ class _AuthFormState extends State<AuthForm> {
                             borderRadius: new BorderRadius.circular(8.0),
                             borderSide: new BorderSide(),
                           ),
-                          labelText: "Enter Email",
+                          labelText: "Enter Username",
                           labelStyle: GoogleFonts.roboto()),
                     ),
                   SizedBox(height: 10),
@@ -111,7 +145,9 @@ class _AuthFormState extends State<AuthForm> {
                                   RoundedRectangleBorder(
                                       borderRadius:
                                           BorderRadius.circular(10)))),
-                          onPressed: () {},
+                          onPressed: () {
+                            startauthentication();
+                          },
                           child: isLoginPage
                               ? Text("Login",
                                   style: GoogleFonts.roboto(fontSize: 16))
@@ -126,8 +162,8 @@ class _AuthFormState extends State<AuthForm> {
                             });
                           },
                           child: isLoginPage
-                              ? Text('Not A Member ?')
-                              : Text('Already a Member?')))
+                              ? Text('Not A Member ?',style: GoogleFonts.roboto(fontSize:18,color:Colors.white))
+                              : Text('Already a Member?',style:GoogleFonts.roboto(fontSize:18,color:Colors.white))))
                 ],
               ),
             ),
